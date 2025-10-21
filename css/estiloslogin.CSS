@@ -1,0 +1,92 @@
+html,
+body {
+  height: 100%;
+}
+.layout-boxed html,
+.layout-boxed body {
+  height: 100%;
+}
+body {
+  font-family: 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-weight: 400;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+
+.login-box,
+.register-box {
+  width: 360px;
+  margin: 7% auto;
+}
+@media (max-width: 768px) {
+  .login-box,
+  .register-box {
+    width: 90%;
+    margin-top: 20px;
+  }
+}
+.login-box-body,
+.register-box-body {
+  background: #fff;
+  padding: 20px;
+  border-top: 0;
+  color: #666;
+}
+.login-box-body .form-control-feedback,
+.register-box-body .form-control-feedback {
+  color: #777;
+}
+.login-box-msg,
+.register-box-msg {
+  margin: 0;
+  text-align: center;
+  padding: 0 20px 20px 20px;
+}
+
+
+.login-logo,
+.register-logo {
+  font-size: 35px;
+  text-align: center;
+  margin-bottom: 25px;
+  font-weight: 300;
+}
+.login-logo a,
+.register-logo a {
+  color: #444;
+}
+
+
+.login-box-body,
+.register-box-body {
+  background: #fff;
+  padding: 20px;
+  border-top: 0;
+  color: #666;
+}
+.login-box-body .form-control-feedback,
+.register-box-body .form-control-feedback {
+  color: #777;
+}
+
+.login-box-msg,
+.register-box-msg {
+  margin: 0;
+  text-align: center;
+  padding: 0 20px 20px 20px;
+}
+
+.hold-transition .content-wrapper,
+.hold-transition .right-side,
+.hold-transition .main-footer,
+.hold-transition .main-sidebar,
+.hold-transition .left-side,
+.hold-transition .main-header .navbar,
+.hold-transition .main-header .logo,
+.hold-transition .menu-open .fa-angle-left {
+  /* Fix for IE */
+  -webkit-transition: none;
+  -o-transition: none;
+  transition: none;
+}

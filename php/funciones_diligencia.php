@@ -1,0 +1,349 @@
+<?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+include "conexion.php";
+
+/* ==========================================
+   🔹 PETICIÓN AJAX: guardar estatus individual
+========================================== */
+if (isset($_POST["ajax_guardar_estatus_diligencia"])) {
+    $id = intval($_POST["id_diligencia"]);
+    $estatus = $_POST["estatus_diligencia"];
+    $sql = "UPDATE exhorto_diligencias SET estatus_diligencia=? WHERE id_diligencia=?";
+    $stmt = $con->prepare($sql);
+    $stmt->bind_param("si", $estatus, $id);
+    $stmt->execute();
+    $stmt->close();
+    echo "ok";
+    exit;
+}
+
+/* ==========================================
+   🔹 PETICIÓN AJAX: guardar fecha/hora/obs individual
+========================================== */
+if (isset($_POST["ajax_guardar_datos"])) {
+    $id_diligencia = intval($_POST["id_diligencia"]);
+    $fecha = trim($_POST["fecha_diligencia"] ?? "");
+    $hora  = trim($_POST["hora_diligencia"] ?? "");
+    $obs   = $_POST["observaciones_diligencia"] ?? null;
+
+    $fecha = ($fecha === "") ? null : $fecha;
+    $hora  = ($hora === "") ? null : $hora;
+
+    $sql = "UPDATE exhorto_diligencias 
+            SET fecha_diligencia=?, hora_diligencia=?, observaciones_diligencia=? 
+            WHERE id_diligencia=?";
+    $stmt = $con->prepare($sql);
+    $stmt->bind_param("sssi", $fecha, $hora, $obs, $id_diligencia);
+    $stmt->execute();
+    $stmt->close();
+    echo "ok";
+    exit;
+}
+
+/* ==========================================
+   🔹 PETICIÓN AJAX: guardar fecha/hora global (audiencia)
+========================================== */
+if (isset($_POST["ajax_guardar_global"])) {
+    $tipo = $_POST["tipo_diligencia"] ?? "";
+    $fecha = trim($_POST["fecha_diligencia"] ?? "");
+    $hora  = trim($_POST["hora_diligencia"] ?? "");
+    $id_expediente = intval($_POST["id_expediente"] ?? 0);
+
+    $fecha = ($fecha === "") ? null : $fecha;
+    $hora  = ($hora === "") ? null : $hora;
+
+    if (!empty($tipo) && $id_expediente > 0) {
+        $sql = "UPDATE exhorto_diligencias 
+                SET fecha_diligencia=?, hora_diligencia=? 
+                WHERE LOWER(diligencia)=LOWER(?) AND id_exhorto=?";
+        $stmt = $con->prepare($sql);
+        $stmt->bind_param("sssi", $fecha, $hora, $tipo, $id_expediente);
+        $stmt->execute();
+        $stmt->close();
+        echo "ok";
+        exit;
+    }
+}
+
+/* ==========================================
+   🔹 FUNCIÓN PRINCIPAL: mostrar diligencias agrupadas
+========================================== */
+function mostrarTablaDiligencias($con, $id_expediente, $id_tua_sesion) {
+
+    // Obtener TUA remitente y destinatario
+    $sqlTuas = "SELECT id_tua_origen, id_tua_destino FROM expedientes WHERE id_expediente = ?";
+    $stmtT = $con->prepare($sqlTuas);
+    $stmtT->bind_param("i", $id_expediente);
+    $stmtT->execute();
+    $stmtT->bind_result($id_tua_remitente, $id_tua_destinatario);
+    $stmtT->fetch();
+    $stmtT->close();
+
+    $es_destinatario = ($id_tua_sesion == $id_tua_destinatario);
+
+    // Traer diligencias
+    $sqlD = "SELECT * FROM exhorto_diligencias WHERE id_exhorto = ?";
+    $stmt = $con->prepare($sqlD);
+    $stmt->bind_param("i", $id_expediente);
+    $stmt->execute();
+    $res = $stmt->get_result();
+
+    if ($res->num_rows == 0) {
+        echo "<p class='text-center'><i>No hay diligencias registradas.</i></p>";
+        return;
+    }
+
+    $diligencias = [];
+    while ($d = $res->fetch_assoc()) {
+        $tipo = ucfirst(strtolower(trim($d["diligencia"])));
+        $diligencias[$tipo][] = $d;
+    }
+    $stmt->close();
+?>
+<style>
+/* ✅ Estilo tipo expediente */
+.table-diligencias {
+    width: 85%;
+    margin: 15px auto 25px;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    border-collapse: separate;
+    border-spacing: 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    font-size: 14px;
+}
+.table-diligencias th {
+    background-color: #f8f9fa;
+    text-align: center;
+    vertical-align: middle;
+    font-weight: 600;
+    color: #2c3e50;
+    border-bottom: 1px solid #dee2e6;
+    padding: 10px;
+}
+.table-diligencias td {
+    text-align: center;
+    vertical-align: middle;
+    padding: 8px;
+    border-top: 1px solid #dee2e6;
+}
+.text-muted {
+    color: #6c757d;
+    font-style: italic;
+    font-size: 0.9em;
+}
+
+/* ✅ Recuadro gris para títulos de diligencia */
+.diligencia-header {
+    background-color: #f1f3f5;
+    border: 1px solid #d6d8db;
+    border-radius: 10px;
+    width: 85%;
+    margin: 30px auto 20px;
+    padding: 14px 25px;
+    text-align: center;
+    font-size: 1.4rem;          /* 🔹 Aumentado el tamaño */
+    font-weight: 700;           /* 🔹 Más negrita */
+    letter-spacing: 0.3px;
+    color: #2c3e50;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.diligencia-header i {
+    color: #4a6fa5;
+    margin-right: 8px;
+    font-size: 1.3rem;
+}
+
+/* ✅ Toast */
+.toast-msg {
+    position: fixed;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #28a745;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    z-index: 9999;
+}
+</style>
+
+<?php foreach ($diligencias as $tipo => $items): ?>
+    <?php 
+    $isEmplazamiento = (strtolower($tipo) === "emplazamiento");
+    $fechaBD = $items[0]["fecha_diligencia"] ?? "";
+    $horaBD  = $items[0]["hora_diligencia"] ?? "";
+    $fechaMostrada = (!empty($fechaBD) && $fechaBD != "0000-00-00") ? date("d/m/Y", strtotime($fechaBD)) : "";
+    $horaMostrada = (!empty($horaBD) && $horaBD != "00:00:00") ? date("h:i A", strtotime($horaBD)) : "";
+    ?>
+
+    <!-- ✅ Recuadro gris del título -->
+    <div class="diligencia-header">
+        <i class="fa fa-folder-open"></i> Diligencia – <?= htmlspecialchars($tipo) ?>
+    </div>
+
+    <?php if ($isEmplazamiento): ?>
+    <div style="text-align:center; margin-bottom:15px;">
+        <div style="display:inline-block; margin-right:40px;">
+            <b>📅 Fecha de audiencia:</b><br>
+            <?php if ($es_destinatario): ?>
+                <input type="date" class="form-control fecha_global" 
+                       style="width:200px; margin:0 auto;"
+                       value="<?= htmlspecialchars($fechaBD && $fechaBD != '0000-00-00' ? $fechaBD : ''); ?>"
+                       data-tipo="<?= htmlspecialchars($tipo); ?>">
+            <?php else: ?>
+                <?= $fechaMostrada ?: "<span class='text-muted'>Sin fecha</span>"; ?>
+            <?php endif; ?>
+        </div>
+        <div style="display:inline-block;">
+            <b>⏰ Hora de audiencia:</b><br>
+            <?php if ($es_destinatario): ?>
+                <input type="time" class="form-control hora_global"
+                       style="width:180px; margin:0 auto;"
+                       value="<?= htmlspecialchars($horaBD && $horaBD != '00:00:00' ? date('H:i', strtotime($horaBD)) : ''); ?>"
+                       data-tipo="<?= htmlspecialchars($tipo); ?>">
+            <?php else: ?>
+                <?= $horaMostrada ?: "<span class='text-muted'>Sin hora</span>"; ?>
+            <?php endif; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <table class="table table-diligencias">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Destinatario</th>
+                <th>Estatus</th>
+                <th>Observaciones</th>
+                <th>Documento PDF</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php $i=1; foreach ($items as $d): ?>
+            <tr>
+                <td><?= $i++; ?></td>
+                <td><?= htmlspecialchars($d["nombre_destinatario"]); ?></td>
+
+                <td>
+                    <?php if ($es_destinatario): ?>
+                        <input type="hidden" class="id_diligencia" value="<?= (int)$d['id_diligencia']; ?>">
+                        <select class="form-control selectEstatusDiligencia text-center"
+                                data-id="<?= (int)$d['id_diligencia']; ?>">
+                            <?php 
+                            $estados=["Pendiente","Realizada","Cancelada"];
+                            foreach($estados as $e)
+                                echo "<option value='$e' ".($d["estatus_diligencia"]==$e?"selected":"").">$e</option>"; 
+                            ?>
+                        </select>
+                    <?php else: ?>
+                        <b><?= htmlspecialchars($d["estatus_diligencia"]); ?></b>
+                    <?php endif; ?>
+                </td>
+
+                <td>
+                    <?php if ($es_destinatario): ?>
+                        <textarea class="form-control observaciones_diligencia"
+                                  style="min-width:200px;"><?= htmlspecialchars($d["observaciones_diligencia"]); ?></textarea>
+                    <?php else: ?>
+                        <?= empty(trim($d["observaciones_diligencia"])) 
+                            ? "<span class='text-muted'>Sin observaciones</span>"
+                            : "<textarea readonly class='form-control-plaintext' style='resize:none;background:none;border:none;'>".htmlspecialchars($d["observaciones_diligencia"])."</textarea>"; ?>
+                    <?php endif; ?>
+                </td>
+
+                <td>
+                    <?php if (!empty($d["pdf_path"])): ?>
+                        <a href="<?= htmlspecialchars($d["pdf_path"]); ?>" target="_blank"
+                           class="btn btn-outline-primary btn-sm">
+                           <i class="glyphicon glyphicon-file"></i> Ver PDF
+                        </a>
+                    <?php elseif ($es_destinatario): ?>
+                        <form action="php/subir_diligencia_pdf.php" method="POST" enctype="multipart/form-data"
+                              id="form_pdf_<?= $d['id_diligencia']; ?>">
+                            <input type="hidden" name="id_diligencia" value="<?= (int)$d['id_diligencia']; ?>">
+                            <input type="hidden" name="id_expediente" value="<?= (int)$id_expediente; ?>">
+                            <input type="hidden" name="es_destinatario" value="1">
+                            <label class="btn btn-outline-secondary btn-sm mb-0" style="width:130px;">
+                                <i class="glyphicon glyphicon-upload"></i> Subir PDF
+                                <input type="file" name="pdf_file" accept="application/pdf" required
+                                       style="display:none;"
+                                       onchange="document.getElementById('form_pdf_<?= $d['id_diligencia']; ?>').submit(); showToast('📄 Subiendo PDF...');">
+                            </label>
+                        </form>
+                    <?php else: ?>
+                        <span class="text-muted">Sin documento</span>
+                    <?php endif; ?>
+                </td>
+            </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+<?php endforeach; ?>
+
+<div id="toast" class="toast-msg"></div>
+
+<script>
+// ✅ Toast centrado arriba
+function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.style.opacity = '1';
+    setTimeout(() => toast.style.opacity = '0', 2500);
+}
+
+// ✅ Guardar estatus individual
+document.querySelectorAll(".selectEstatusDiligencia").forEach(sel=>{
+    sel.addEventListener("change", async function(){
+        const id=this.dataset.id;
+        const estatus=this.value;
+        const fd=new FormData();
+        fd.append("ajax_guardar_estatus_diligencia","1");
+        fd.append("id_diligencia",id);
+        fd.append("estatus_diligencia",estatus);
+        await fetch("php/funciones_diligencia.php",{method:"POST",body:fd});
+        showToast("✅ Estatus actualizado a: "+estatus);
+    });
+});
+
+// ✅ Guardar observaciones sin recargar
+document.querySelectorAll(".observaciones_diligencia").forEach(input=>{
+    input.addEventListener("change", async ()=>{
+        const row = input.closest("tr");
+        const id = row.querySelector(".id_diligencia")?.value;
+        const obs = input.value;
+        const fd = new FormData();
+        fd.append("ajax_guardar_datos","1");
+        fd.append("id_diligencia",id);
+        fd.append("observaciones_diligencia",obs);
+        await fetch("php/funciones_diligencia.php",{method:"POST",body:fd});
+        showToast("📝 Observación guardada");
+    });
+});
+
+// ✅ Guardar fecha/hora global
+document.querySelectorAll(".fecha_global, .hora_global").forEach(input=>{
+    input.addEventListener("change", async ()=>{
+        const tipo = input.dataset.tipo;
+        const valorFecha = document.querySelector(".fecha_global")?.value || "";
+        const valorHora = document.querySelector(".hora_global")?.value || "";
+        const fd = new FormData();
+        fd.append("tipo_diligencia", tipo);
+        fd.append("fecha_diligencia", valorFecha);
+        fd.append("hora_diligencia", valorHora);
+        fd.append("id_expediente", <?= (int)$id_expediente; ?>);
+        fd.append("ajax_guardar_global", "1");
+        await fetch("php/funciones_diligencia.php",{method:"POST",body:fd});
+        showToast("⏰ Fecha y hora guardadas para este expediente");
+    });
+});
+</script>
+<?php
+} // cierre función
+?>
