@@ -1,0 +1,31 @@
+# 💾 Archivos y carpetas locales que no deben subirse a GitHub
+
+# Carpetas locales o temporales
+xampp/
+uploads/
+tmp/
+backup/
+cache/
+database_backup/
+
+# Archivos sensibles
+php/conexion.php
+*.env
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Archivos de logs
+*.log
+error_log
+
+# Archivos de VS Code
+.vscode/
+.history/
+
+# Archivos temporales o de sesión
+*.bak
+*.tmp
+*.swp
