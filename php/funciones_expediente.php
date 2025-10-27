@@ -1,60 +1,46 @@
 <?php
 include "conexion.php";
 
-// ===================================================
-// 🔹 PETICIÓN AJAX: actualizar estatus sin recargar
-// ===================================================
-if (isset($_POST["ajax_guardar_estatus_expediente"])) {
-    $id = intval($_POST["id_expediente"]);
-    $estatus = $_POST["estatus"];
+/* ===================================================
+   🔹 ACTUALIZAR DATOS DE EXPEDIENTE (sin AJAX)
+   Se ejecuta cuando se envía un formulario por POST
+=================================================== */
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["guardar_expediente"])) {
+    $id_expediente = intval($_POST["id_expediente"] ?? 0);
+    $nuevo_estatus = trim($_POST["estatus"] ?? "");
+    $nuevo_folio   = trim($_POST["folio_destino"] ?? "");
+    $fecha_recep   = trim($_POST["fecha_recepcion"] ?? "");
 
-    $sql = "UPDATE expedientes SET estatus=? WHERE id_expediente=?";
-    $stmt = $con->prepare($sql);
-    $stmt->bind_param("si", $estatus, $id);
-    $stmt->execute();               
-    $stmt->close();
+    if ($id_expediente > 0) {
+        if ($nuevo_estatus !== "") {
+            $stmt = $con->prepare("UPDATE expedientes SET estatus=? WHERE id_expediente=?");
+            $stmt->bind_param("si", $nuevo_estatus, $id_expediente);
+            $stmt->execute();
+            $stmt->close();
+        }
 
-    echo "ok";
-    exit;
+        if ($nuevo_folio !== "") {
+            $stmt = $con->prepare("UPDATE expedientes SET folio_destino=? WHERE id_expediente=?");
+            $stmt->bind_param("si", $nuevo_folio, $id_expediente);
+            $stmt->execute();
+            $stmt->close();
+        }
+
+        if ($fecha_recep !== "") {
+            $stmt = $con->prepare("UPDATE expedientes SET fecha_recepcion=? WHERE id_expediente=?");
+            $stmt->bind_param("si", $fecha_recep, $id_expediente);
+            $stmt->execute();
+            $stmt->close();
+        }
+    }
+
+    header("Location: ../viewExpediente.php?id=" . $id_expediente . "&msg=guardado");
+    exit();
 }
 
-// ===================================================
-// 🔹 PETICIÓN AJAX: actualizar folio sin recargar
-// ===================================================
-if (isset($_POST["ajax_guardar_folio"])) {
-    $id = intval($_POST["id_expediente"]);
-    $folio = trim($_POST["folio_destino"]);
-
-    $sql = "UPDATE expedientes SET folio_destino=? WHERE id_expediente=?";
-    $stmt = $con->prepare($sql);
-    $stmt->bind_param("si", $folio, $id);
-    $stmt->execute();
-    $stmt->close();
-
-    echo "ok";
-    exit;
-}
-
-// ===================================================
-// 🔹 PETICIÓN AJAX: actualizar fecha de recepción
-// ===================================================
-if (isset($_POST["ajax_guardar_fecha_recepcion"])) {
-    $id = intval($_POST["id_expediente"]);
-    $fecha = $_POST["fecha_recepcion"];
-
-    $sql = "UPDATE expedientes SET fecha_recepcion=? WHERE id_expediente=?";
-    $stmt = $con->prepare($sql);
-    $stmt->bind_param("si", $fecha, $id);
-    $stmt->execute();
-    $stmt->close();
-
-    echo "ok";
-    exit;
-}
-
-// ===================================================
-// 🔹 GENERAR NÚMERO DE EXHORTO ####/AAAA
-// ===================================================
+/* ===================================================
+   🔹 GENERAR NÚMERO DE EXHORTO ####/AAAA
+=================================================== */
 function generarNumeroExhorto($con) {
     $anio_actual = date("Y");
     $sql = "SELECT exhorto FROM expedientes WHERE exhorto LIKE '%/$anio_actual' ORDER BY id_expediente DESC LIMIT 1";
@@ -69,9 +55,9 @@ function generarNumeroExhorto($con) {
     return str_pad($ultimo + 1, 4, "0", STR_PAD_LEFT) . "/" . $anio_actual;
 }
 
-// ===================================================
-// 🔹 GENERAR NÚMERO DE EXPEDIENTE ####/AAAA-TUA
-// ===================================================
+/* ===================================================
+   🔹 GENERAR NÚMERO DE EXPEDIENTE ####/AAAA-TUA
+=================================================== */
 function generarNumeroExpediente($con, $id_tua_origen) {
     $anio = date("Y");
     $tua_usuario = "";
@@ -91,9 +77,9 @@ function generarNumeroExpediente($con, $id_tua_origen) {
     return $nuevo_num;
 }
 
-// ===================================================
-// 🔹 OBTENER DETALLE DE EXPEDIENTE
-// ===================================================
+/* ===================================================
+   🔹 OBTENER DETALLE DE EXPEDIENTE
+=================================================== */
 function obtenerExpedientePorID($con, $id) {
     $sql = "SELECT e.id_expediente, e.num_expediente, e.exhorto, e.estatus, e.f_registro,
                    e.folio_destino, e.fecha_recepcion, e.id_tua_origen, e.id_tua_destino,
@@ -118,12 +104,10 @@ function obtenerExpedientePorID($con, $id) {
     return $expediente;
 }
 
-// ===================================================
-// 🔹 MOSTRAR TABLA DE INFORMACIÓN DEL EXPEDIENTE
-// ===================================================
+/* ===================================================
+   🔹 MOSTRAR TABLA DE INFORMACIÓN DEL EXPEDIENTE
+=================================================== */
 function mostrarDatosExpediente($expediente, $estatus_actual, $es_destinatario) { ?>
-    <div id="toastMsg"></div>
-
     <table class="table table-bordered text-center align-middle">
         <tr><th>Número de Expediente</th><td><?= htmlspecialchars($expediente["num_expediente"]); ?></td></tr>
         <tr><th>Estado</th><td><?= htmlspecialchars($expediente["nombre_estado"]); ?></td></tr>
@@ -134,12 +118,12 @@ function mostrarDatosExpediente($expediente, $estatus_actual, $es_destinatario) 
         <tr><th>TUA Destino</th><td><?= htmlspecialchars($expediente["tua_destino"] . " — " . $expediente["ciudad_destino"]); ?></td></tr>
         <tr><th>Fecha Registro</th><td><?= $expediente["f_registro"] ? date("d/m/Y h:i A", strtotime($expediente["f_registro"])) : "Sin registro"; ?></td></tr>
 
-        <!-- ✅ Estatus integrado -->
+        <!-- Estatus -->
         <tr>
             <th>Estatus Actual</th>
             <td>
                 <?php if ($es_destinatario): ?>
-                    <select id="selectEstatusExpediente" class="estatus-select">
+                    <select name="estatus" class="form-select text-center" style="max-width:220px; margin:auto;">
                         <?php
                         $estatuses = ["En Proceso", "Atendida", "Vencida", "Incompetencia"];
                         foreach ($estatuses as $op) {
@@ -149,116 +133,33 @@ function mostrarDatosExpediente($expediente, $estatus_actual, $es_destinatario) 
                         ?>
                     </select>
                 <?php else: ?>
-                    <span class="estatus-view"><?= htmlspecialchars($estatus_actual); ?></span>
+                    <?= htmlspecialchars($estatus_actual); ?>
                 <?php endif; ?>
             </td>
         </tr>
 
-        <!-- ✅ Folio de Recepción -->
+        <!-- Folio -->
         <tr>
             <th>Folio de Recepción</th>
             <td>
                 <?php if ($es_destinatario): ?>
-                    <span id="folio_destino_label" contenteditable="true" class="folio-editable-box" title="Haz clic para editar">
-                        <?= htmlspecialchars($expediente["folio_destino"] ?? '') ?>
-                    </span>
+                    <input type="text" name="folio_destino" value="<?= htmlspecialchars($expediente["folio_destino"] ?? '') ?>" class="form-control text-center" style="max-width:220px; margin:auto;">
                 <?php else: ?>
-                    <?= !empty($expediente["folio_destino"])
-                        ? htmlspecialchars($expediente["folio_destino"])
-                        : "<span class='text-muted'>Sin folio</span>"; ?>
+                    <?= !empty($expediente["folio_destino"]) ? htmlspecialchars($expediente["folio_destino"]) : "<span class='text-muted'>Sin folio</span>"; ?>
                 <?php endif; ?>
             </td>
         </tr>
 
-        <!-- 🆕 Fecha de Recepción -->
+        <!-- Fecha -->
         <tr>
             <th>Fecha de Recepción</th>
             <td>
                 <?php if ($es_destinatario): ?>
-                    <input type="date" id="fecha_recepcion_input" class="fecha-input"
-                           value="<?= htmlspecialchars($expediente["fecha_recepcion"] ?? '') ?>">
+                    <input type="date" name="fecha_recepcion" value="<?= htmlspecialchars($expediente["fecha_recepcion"] ?? '') ?>" class="form-control text-center" style="max-width:220px; margin:auto;">
                 <?php else: ?>
-                    <?= !empty($expediente["fecha_recepcion"])
-                        ? htmlspecialchars($expediente["fecha_recepcion"])
-                        : "<span class='text-muted'>Sin fecha</span>"; ?>
+                    <?= !empty($expediente["fecha_recepcion"]) ? htmlspecialchars($expediente["fecha_recepcion"]) : "<span class='text-muted'>Sin fecha</span>"; ?>
                 <?php endif; ?>
             </td>
         </tr>
     </table>
-
-    <?php if ($es_destinatario): ?>
-    <script>
-    document.addEventListener("DOMContentLoaded", ()=>{
-        const folioEl = document.getElementById("folio_destino_label");
-        const selectEstatus = document.getElementById("selectEstatusExpediente");
-        const fechaRecepcion = document.getElementById("fecha_recepcion_input");
-        const toast = document.getElementById("toastMsg");
-
-        function mostrarToast(msg) {
-            toast.innerHTML = `<div class="toast-box">${msg}</div>`;
-            toast.style.opacity = "1";
-            setTimeout(()=> toast.style.opacity = "0", 2500);
-        }
-
-        // === Guardar FOLIO ===
-        folioEl?.addEventListener("blur", ()=>guardarFolio(folioEl.innerText.trim()));
-        folioEl?.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); folioEl.blur(); } });
-
-        async function guardarFolio(folio){
-            const data = new FormData();
-            data.append("ajax_guardar_folio","1");
-            data.append("id_expediente","<?= (int)$expediente['id_expediente']; ?>");
-            data.append("folio_destino",folio);
-            const resp = await fetch("php/funciones_expediente.php",{method:"POST",body:data});
-            if(resp.ok) mostrarToast("✅ Folio guardado correctamente");
-        }
-
-        // === Guardar ESTATUS ===
-        selectEstatus?.addEventListener("change", async ()=>{
-            const valor = selectEstatus.value;
-            const data = new FormData();
-            data.append("ajax_guardar_estatus_expediente","1");
-            data.append("id_expediente","<?= (int)$expediente['id_expediente']; ?>");
-            data.append("estatus",valor);
-            const resp = await fetch("php/funciones_expediente.php",{method:"POST",body:data});
-            if(resp.ok) mostrarToast("✅ Estatus actualizado a: " + valor);
-        });
-
-        // === Guardar FECHA DE RECEPCIÓN ===
-        fechaRecepcion?.addEventListener("change", async ()=>{
-            const fecha = fechaRecepcion.value;
-            const data = new FormData();
-            data.append("ajax_guardar_fecha_recepcion","1");
-            data.append("id_expediente","<?= (int)$expediente['id_expediente']; ?>");
-            data.append("fecha_recepcion",fecha);
-            const resp = await fetch("php/funciones_expediente.php",{method:"POST",body:data});
-            if(resp.ok) mostrarToast("📅 Fecha de recepción guardada");
-        });
-    });
-    </script>
-
-    <style>
-    /* --- Estilos suaves y limpios --- */
-    .estatus-select, .fecha-input, .folio-editable-box {
-        border: 1px solid #bcbcbc;
-        padding: 5px 8px;
-        border-radius: 6px;
-        background-color: #fff;
-        color: #333;
-        min-width: 180px;
-        display: inline-block;
-        text-align: center;
-        transition: all 0.2s ease;
-    }
-    .estatus-select:focus, .fecha-input:focus, .folio-editable-box:focus {
-        outline: none;
-        border-color: #28a745;
-        box-shadow: 0 0 5px rgba(40,167,69,0.4);
-    }
-    .folio-editable-box[contenteditable="true"]:focus {
-        cursor: text;
-    }
-    </style>
-    <?php endif;
-}
-?>
+<?php } ?>
