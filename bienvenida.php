@@ -1,7 +1,7 @@
 <?php
 session_start();
 if (empty($_SESSION["userid"])) {
-    header("Location: index.php?error=Sin_sesion_iniciada");
+    header("Location: /proyecto_exhorto/index.php?error=Sin_sesion_iniciada");
     exit();
 }
 
@@ -19,6 +19,7 @@ SELECT
     e.id_expediente,
     e.num_expediente,
     e.exhorto,
+    e.folio_destino,
     est.estado AS nombre_estado,
     mun.municipio AS nombre_municipio,
     nac.nucleo AS nombre_nucleo,
@@ -41,6 +42,7 @@ SELECT
     e.id_expediente,
     e.num_expediente,
     e.exhorto,
+    e.folio_destino,
     est.estado AS nombre_estado,
     mun.municipio AS nombre_municipio,
     nac.nucleo AS nombre_nucleo,
@@ -67,12 +69,12 @@ $res_recibidos = $con->query($sql_recibidos);
     vertical-align: middle !important;
     font-weight: 700;
     background-color: #f8f9fa;
-    letter-spacing: 0.4px;
 }
 .table td {
     text-align: center;
     vertical-align: middle !important;
 }
+.folio-destino { display: none; }
 
 /* ✅ Mensaje de “sin resultados” */
 #mensajeSinResultados {
@@ -84,18 +86,11 @@ $res_recibidos = $con->query($sql_recibidos);
     border-radius: 6px;
     margin-top: 20px;
     width: 60%;
-    margin-left: auto;
-    margin-right: auto;
+    margin: 20px auto;
     box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    animation: none;
 }
-
-/* ✅ Animación shake */
-@keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    20%, 60% { transform: translateX(-8px); }
-    40%, 80% { transform: translateX(8px); }
-}
+@keyframes shake {0%,100%{transform:translateX(0);}20%,60%{transform:translateX(-8px);}40%,80%{transform:translateX(8px);}}
+@keyframes flashTab {0%,100%{color:#004085;}50%{color:#ff4500;}}
 </style>
 
 <div class="container text-center">
@@ -119,7 +114,6 @@ $res_recibidos = $con->query($sql_recibidos);
         <input type="text" id="busqueda" class="form-control" placeholder="Buscar">
     </div>
 
-    <!-- ⚠️ Mensaje cuando no hay resultados -->
     <div id="mensajeSinResultados">⚠️ No se encontraron resultados en Enviados ni en Recepcionados.</div>
 
     <ul class="nav nav-tabs">
@@ -139,6 +133,7 @@ $res_recibidos = $con->query($sql_recibidos);
                         <th>Municipio</th>
                         <th>Núcleo Agrario</th>
                         <th>Exhorto</th>
+                        <th class="folio-destino">Folio Destino</th>
                         <th>TUA Destino</th>
                         <th>Estatus</th>
                         <th></th>
@@ -153,6 +148,7 @@ $res_recibidos = $con->query($sql_recibidos);
                                 <td><?= htmlspecialchars($row["nombre_municipio"]); ?></td>
                                 <td><?= htmlspecialchars($row["nombre_nucleo"]); ?></td>
                                 <td><?= htmlspecialchars($row["exhorto"]); ?></td>
+                                <td class="folio-destino"><?= htmlspecialchars($row["folio_destino"]); ?></td>
                                 <td><?= htmlspecialchars($row["tua_destino"]); ?></td>
                                 <td><?= htmlspecialchars($row["estatus"]); ?></td>
                                 <td>
@@ -164,7 +160,7 @@ $res_recibidos = $con->query($sql_recibidos);
                             </tr>
                         <?php endwhile; ?>
                     <?php else: ?>
-                        <tr><td colspan="8">No hay documentos enviados</td></tr>
+                        <tr><td colspan="9">No hay documentos enviados</td></tr>
                     <?php endif; ?>
                 </tbody>
             </table>
@@ -181,6 +177,7 @@ $res_recibidos = $con->query($sql_recibidos);
                         <th>Municipio</th>
                         <th>Núcleo Agrario</th>
                         <th>Exhorto</th>
+                        <th class="folio-destino">Folio Destino</th>
                         <th>TUA Origen</th>
                         <th>Estatus</th>
                         <th></th>
@@ -195,6 +192,7 @@ $res_recibidos = $con->query($sql_recibidos);
                                 <td><?= htmlspecialchars($row["nombre_municipio"]); ?></td>
                                 <td><?= htmlspecialchars($row["nombre_nucleo"]); ?></td>
                                 <td><?= htmlspecialchars($row["exhorto"]); ?></td>
+                                <td class="folio-destino"><?= htmlspecialchars($row["folio_destino"]); ?></td>
                                 <td><?= htmlspecialchars($row["tua_origen"]); ?></td>
                                 <td><?= htmlspecialchars($row["estatus"]); ?></td>
                                 <td>
@@ -206,7 +204,7 @@ $res_recibidos = $con->query($sql_recibidos);
                             </tr>
                         <?php endwhile; ?>
                     <?php else: ?>
-                        <tr><td colspan="8">No hay documentos recibidos</td></tr>
+                        <tr><td colspan="9">No hay documentos recibidos</td></tr>
                     <?php endif; ?>
                 </tbody>
             </table>
@@ -214,49 +212,57 @@ $res_recibidos = $con->query($sql_recibidos);
     </div>
 </div>
 
-<!-- ✅ SCRIPT MEJORADO -->
+<!-- ✅ SCRIPT DE BÚSQUEDA AVANZADA -->
 <script>
 $(function(){
     $('[data-toggle="tooltip"]').tooltip();
 
     $("#busqueda").on("keyup", function() {
-        var valor = $(this).val().toLowerCase().trim();
-        var encontradosEnviados = 0;
-        var encontradosRecibidos = 0;
+        const valor = $(this).val().toLowerCase().trim();
+        const palabras = valor.split(/\s+/).filter(p => p.length > 0);
+        let encontradosEnviados = 0;
+        let encontradosRecibidos = 0;
 
-        // Filtrar ENVIADOS
+        // --- Enviados ---
         $("#tablaEnviados tbody tr").each(function() {
-            var visible = $(this).text().toLowerCase().indexOf(valor) > -1;
+            const texto = $(this).text().toLowerCase();
+            const visible = palabras.every(p => texto.includes(p));
             $(this).toggle(visible);
             if (visible) encontradosEnviados++;
         });
 
-        // Filtrar RECIBIDOS
+        // --- Recibidos ---
         $("#tablaRecibidos tbody tr").each(function() {
-            var visible = $(this).text().toLowerCase().indexOf(valor) > -1;
+            const texto = $(this).text().toLowerCase();
+            const visible = palabras.every(p => texto.includes(p));
             $(this).toggle(visible);
             if (visible) encontradosRecibidos++;
         });
 
-        // ✅ Mostrar mensaje si no hay resultados (con shake)
-        if (valor.length > 0 && encontradosEnviados === 0 && encontradosRecibidos === 0) {
-            $("#mensajeSinResultados")
-                .stop(true, true)
-                .fadeIn(200)
-                .css("animation", "shake 0.4s ease");
+        // --- Mostrar mensaje sin resultados ---
+        if (valor && encontradosEnviados === 0 && encontradosRecibidos === 0) {
+            $("#mensajeSinResultados").fadeIn(200).css("animation", "shake 0.4s ease");
             setTimeout(()=> $("#mensajeSinResultados").css("animation", "none"), 600);
         } else {
             $("#mensajeSinResultados").fadeOut(200);
         }
 
-        // ✅ Cambiar automáticamente de pestaña según resultados
-        if (valor.length > 0) {
-            if (encontradosRecibidos > 0 && encontradosEnviados === 0) {
-                $(".nav-tabs li:eq(1) a").tab("show");
-                $('html, body').animate({ scrollTop: $("#recibidos").offset().top - 80 }, 500);
-            } else if (encontradosEnviados > 0 && encontradosRecibidos === 0) {
+        // --- Cambiar pestaña automáticamente ---
+        if (valor) {
+            if (encontradosEnviados > 0 && encontradosRecibidos === 0) {
                 $(".nav-tabs li:eq(0) a").tab("show");
-                $('html, body').animate({ scrollTop: $("#enviados").offset().top - 80 }, 500);
+                $('html, body').animate({ scrollTop: $("#enviados").offset().top - 80 }, 400);
+            } 
+            else if (encontradosRecibidos > 0 && encontradosEnviados === 0) {
+                $(".nav-tabs li:eq(1) a").tab("show");
+                $('html, body').animate({ scrollTop: $("#recibidos").offset().top - 80 }, 400);
+            } 
+            else if (encontradosEnviados > 0 && encontradosRecibidos > 0) {
+                $(".nav-tabs li a").css("animation", "none");
+                setTimeout(() => {
+                    $(".nav-tabs li:eq(0) a, .nav-tabs li:eq(1) a")
+                        .css("animation", "flashTab 1s ease 2");
+                }, 100);
             }
         } else {
             $("#mensajeSinResultados").fadeOut(200);

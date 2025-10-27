@@ -6,7 +6,7 @@ $(function(){
     $("#estado_exh").change(function(){
         var id_estado = $(this).val();
         if(id_estado){
-            $.post("/proyecto_exhorto/almacen2/php/getMunicipios.php", {id_estado}, function(data){
+            $.post("/proyecto_exhorto/php/getMunicipios.php", {id_estado}, function(data){
                 $("#municipio_exh").html('<option value="">Seleccione...</option>');
                 $.each(data, function(i, municipio){
                     $("#municipio_exh").append('<option value="'+municipio.id+'">'+municipio.municipio+'</option>');
@@ -20,7 +20,7 @@ $(function(){
     $("#municipio_exh").change(function(){
         var id_municipio = $(this).val();
         if(id_municipio){
-            $.post("/proyecto_exhorto/almacen2/php/getNucleos.php", {id_municipio}, function(data){
+            $.post("/proyecto_exhorto/php/getNucleos.php", {id_municipio}, function(data){
                 $("#nucleo_exh").html('<option value="">Seleccione...</option>');
                 $.each(data, function(i, nucleo){
                     $("#nucleo_exh").append('<option value="'+nucleo.id+'">'+nucleo.nucleo+'</option>');

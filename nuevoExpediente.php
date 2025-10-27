@@ -1,7 +1,7 @@
 <?php
 session_start();
 if (empty($_SESSION["userid"])) {
-    header("Location: /proyecto_exhorto/almacen2/index.php?error=Sin_sesion_iniciada");
+    header("Location: /proyecto_exhorto/index.php?error=Sin_sesion_iniciada");
     exit();
 }
 
@@ -37,9 +37,9 @@ $tuas = $con->query("SELECT id, tua, ciudad_sede
 <head>
     <meta charset="utf-8">
     <title>Nuevo Exhorto</title>
-    <link rel="stylesheet" href="/proyecto_exhorto/almacen2/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/proyecto_exhorto/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="/proyecto_exhorto/almacen2/js/jquery.min.js"></script>
+    <script src="/proyecto_exhorto/js/jquery.min.js"></script>
 
     <style>
         body {
@@ -81,7 +81,7 @@ $tuas = $con->query("SELECT id, tua, ciudad_sede
     <h2><i class="fa fa-file-circle-plus"></i> Registro de Nuevo Exhorto</h2>
 
     <form id="formExhorto" method="POST" enctype="multipart/form-data" 
-          action="/proyecto_exhorto/almacen2/php/guardar_exhorto.php">
+          action="/proyecto_exhorto/php/guardar_exhorto.php">
         
         <!-- Número de Expediente -->
         <div class="form-group row justify-content-center">
@@ -180,7 +180,7 @@ $tuas = $con->query("SELECT id, tua, ciudad_sede
             <button type="submit" class="btn btn-success btn-lg">
                 <i class="fa fa-save"></i> Guardar
             </button>
-            <a href="/proyecto_exhorto/almacen2/bienvenida.php" class="btn btn-default btn-lg">
+            <a href="/proyecto_exhorto/bienvenida.php" class="btn btn-default btn-lg">
                 <i class="fa fa-times"></i> Cancelar
             </a>
         </div>
@@ -252,7 +252,6 @@ document.addEventListener("DOMContentLoaded", () => {
     input.addEventListener("input", () => {
         const valor = input.value;
 
-        // Si el usuario solo escribió los primeros 4 dígitos, añadir automáticamente /AAAA-
         if (/^[0-9]{4}$/.test(valor)) {
             input.value = valor + "/" + anio + "-";
         }
@@ -265,7 +264,7 @@ document.addEventListener("DOMContentLoaded", () => {
 $("#estado_exh").change(function(){
     var id_estado = $(this).val();
     if(id_estado){
-        $.post("/proyecto_exhorto/almacen2/php/getMunicipios.php", {id_estado}, function(data){
+        $.post("/proyecto_exhorto/php/getMunicipios.php", {id_estado}, function(data){
             $("#municipio_exh").html('<option value="">Seleccione...</option>');
             $.each(data, function(i, municipio){
                 $("#municipio_exh").append('<option value="'+municipio.id+'">'+municipio.municipio+'</option>');
@@ -278,7 +277,7 @@ $("#estado_exh").change(function(){
 $("#municipio_exh").change(function(){
     var id_municipio = $(this).val();
     if(id_municipio){
-        $.post("/proyecto_exhorto/almacen2/php/getNucleos.php", {id_municipio}, function(data){
+        $.post("/proyecto_exhorto/php/getNucleos.php", {id_municipio}, function(data){
             $("#nucleo_exh").html('<option value="">Seleccione...</option>');
             $.each(data, function(i, nucleo){
                 $("#nucleo_exh").append('<option value="'+nucleo.id+'">'+nucleo.nucleo+'</option>');

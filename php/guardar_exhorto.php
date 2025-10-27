@@ -1,7 +1,7 @@
 <?php
 session_start();
 if (empty($_SESSION["userid"])) {
-    header("Location: /proyecto_exhorto/almacen2/index.php?error=Sin_sesion_iniciada");
+    header("Location: /proyecto_exhorto/index.php?error=Sin_sesion_iniciada");
     exit();
 }
 
@@ -109,7 +109,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         // ==========================================
         // REDIRECCIÓN CON MENSAJE DE ÉXITO
         // ==========================================
-        header("Location: /proyecto_exhorto/almacen2/bienvenida.php?msg=guardado");
+        header("Location: /proyecto_exhorto/bienvenida.php?msg=guardado");
         exit();
 
     } else {
@@ -119,7 +119,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 } else {
     // Si el método no es POST, redirige
-    header("Location: /proyecto_exhorto/almacen2/bienvenida.php");
+    header("Location: /proyecto_exhorto/bienvenida.php");
     exit();
 }
 ?>
