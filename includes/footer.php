@@ -1,5 +1,5 @@
 <footer>
-    <small>&copy; <?= date("Y"); ?> Tribunal Superior Agrario — Unidad de Tecnologías de la Información (UTICS)</small>
+    <small>&copy; <?= date("Y"); ?> Tribunal Superior Agrario — UNIDAD DE TECNOLOGIAS DE LA INFORMACIÓN Y COMUNICACIONES (UTIC)</small>
 </footer>
 </body>
 </html>

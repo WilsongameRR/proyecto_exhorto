@@ -154,25 +154,33 @@ function mostrarDatosExpediente($expediente, $estatus_actual, $es_destinatario) 
             </td>
         </tr>
 
-        <!-- ✅ Folio integrado -->
+        <!-- ✅ Folio de Recepción -->
         <tr>
             <th>Folio de Recepción</th>
             <td>
-                <span id="folio_destino_label"
-                      <?= $es_destinatario ? 'contenteditable="true" class="folio-editable" title="Haz clic para editar"' : 'class="folio-view-only"' ?>>
-                    <?= htmlspecialchars($expediente["folio_destino"] ?? '') ?>
-                </span>
+                <?php if ($es_destinatario): ?>
+                    <span id="folio_destino_label" contenteditable="true" class="folio-editable-box" title="Haz clic para editar">
+                        <?= htmlspecialchars($expediente["folio_destino"] ?? '') ?>
+                    </span>
+                <?php else: ?>
+                    <?= !empty($expediente["folio_destino"])
+                        ? htmlspecialchars($expediente["folio_destino"])
+                        : "<span class='text-muted'>Sin folio</span>"; ?>
+                <?php endif; ?>
             </td>
         </tr>
 
-        <!-- 🆕 Nueva fila: Fecha de Recepción -->
+        <!-- 🆕 Fecha de Recepción -->
         <tr>
             <th>Fecha de Recepción</th>
             <td>
                 <?php if ($es_destinatario): ?>
-                    <input type="date" id="fecha_recepcion_input" class="fecha-input" value="<?= htmlspecialchars($expediente["fecha_recepcion"] ?? '') ?>">
+                    <input type="date" id="fecha_recepcion_input" class="fecha-input"
+                           value="<?= htmlspecialchars($expediente["fecha_recepcion"] ?? '') ?>">
                 <?php else: ?>
-                    <span class="fecha-view"><?= htmlspecialchars($expediente["fecha_recepcion"] ?? '') ?></span>
+                    <?= !empty($expediente["fecha_recepcion"])
+                        ? htmlspecialchars($expediente["fecha_recepcion"])
+                        : "<span class='text-muted'>Sin fecha</span>"; ?>
                 <?php endif; ?>
             </td>
         </tr>
@@ -230,33 +238,26 @@ function mostrarDatosExpediente($expediente, $estatus_actual, $es_destinatario) 
     </script>
 
     <style>
-    table.table { width: 100%; text-align: center; margin: 0 auto; }
-    .table th, .table td { text-align: center !important; vertical-align: middle !important; }
-
-    .folio-editable, .estatus-select, .fecha-input {
+    /* --- Estilos suaves y limpios --- */
+    .estatus-select, .fecha-input, .folio-editable-box {
         border: 1px solid #bcbcbc;
         padding: 5px 8px;
         border-radius: 6px;
-        min-width: 180px;
         background-color: #fff;
         color: #333;
+        min-width: 180px;
+        display: inline-block;
         text-align: center;
         transition: all 0.2s ease;
     }
-    .folio-view-only, .estatus-view, .fecha-view {
-        border: 1px solid #dcdcdc;
-        padding: 5px 8px;
-        border-radius: 6px;
-        background-color: #f9f9f9;
-        color: #333;
-        display: inline-block;
-        min-width: 180px;
-        text-align: center;
+    .estatus-select:focus, .fecha-input:focus, .folio-editable-box:focus {
+        outline: none;
+        border-color: #28a745;
+        box-shadow: 0 0 5px rgba(40,167,69,0.4);
     }
-
-    #toastMsg { position: fixed; top: 30px; left: 50%; transform: translateX(-50%); z-index: 9999; opacity: 0; transition: opacity 0.4s ease; }
-    .toast-box { background-color: #28a745; color: white; padding: 12px 20px; border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,0.15); font-weight: 500; animation: fadeInOut 2.5s ease; }
-    @keyframes fadeInOut { 0%{opacity:0;transform:translateY(-10px);}10%,85%{opacity:1;transform:translateY(0);}100%{opacity:0;transform:translateY(-10px);} }
+    .folio-editable-box[contenteditable="true"]:focus {
+        cursor: text;
+    }
     </style>
     <?php endif;
 }
