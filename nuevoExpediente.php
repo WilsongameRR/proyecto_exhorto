@@ -208,7 +208,14 @@ $("#agregar_diligencia").click(function(){
 
         <div class="form-group otro-diligencia" id="otro_diligencia_${contador}" style="display:none;">
             <label><b>Especifique el tipo de diligencia</b></label>
-            <input type="text" name="diligencias[${contador}][otro_diligencia]" class="form-control otro-input" placeholder="Describa la diligencia...">
+            <input type="text" name="diligencias[${contador}][otro_diligencia]" class="form-control" placeholder="Describa la diligencia...">
+        </div>
+
+        <div class="form-group fecha-hora" id="fecha_hora_${contador}" style="display:none;">
+            <label><b>Fecha de Audiencia</b></label>
+            <input type="date" name="diligencias[${contador}][fecha_diligencia]" class="form-control mb-2">
+            <label><b>Hora de Audiencia</b></label>
+            <input type="time" name="diligencias[${contador}][hora_diligencia]" class="form-control">
         </div>
 
         <div class="form-group">
@@ -227,16 +234,21 @@ $("#agregar_diligencia").click(function(){
     $("#contenedor_diligencias").append(card);
 });
 
+// Mostrar campos según tipo
 $(document).on("change", ".select-diligencia", function(){
     const id = $(this).data("id");
     const valor = $(this).val();
-    const campoOtro = $("#otro_diligencia_" + id);
-    campoOtro.hide();
+    $("#otro_diligencia_" + id).hide();
+    $("#fecha_hora_" + id).hide();
+
     if (valor === "Otro") {
-        campoOtro.slideDown();
+        $("#otro_diligencia_" + id).slideDown();
+    } else if (valor === "Emplazamiento") {
+        $("#fecha_hora_" + id).slideDown();
     }
 });
 
+// Eliminar diligencia
 $(document).on("click", ".eliminar_fila", function(){
     const id = $(this).data("id");
     $("#diligencia_" + id).fadeOut(300, function(){ $(this).remove(); });
@@ -251,7 +263,6 @@ document.addEventListener("DOMContentLoaded", () => {
     
     input.addEventListener("input", () => {
         const valor = input.value;
-
         if (/^[0-9]{4}$/.test(valor)) {
             input.value = valor + "/" + anio + "-";
         }
