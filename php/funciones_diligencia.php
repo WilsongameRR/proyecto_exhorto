@@ -5,97 +5,6 @@ if (session_status() === PHP_SESSION_NONE) {
 include "conexion.php";
 
 /* ==========================================
-   🔹 GUARDAR ESTATUS INDIVIDUAL (AJAX)
-========================================== */
-if (isset($_POST["ajax_guardar_estatus_diligencia"])) {
-    $id = intval($_POST["id_diligencia"]);
-    $estatus = $_POST["estatus_diligencia"];
-    $sql = "UPDATE exhorto_diligencias SET estatus_diligencia=? WHERE id_diligencia=?";
-    $stmt = $con->prepare($sql);
-    $stmt->bind_param("si", $estatus, $id);
-    $stmt->execute();
-    $stmt->close();
-    echo "ok";
-    exit;
-}
-
-/* ==========================================
-   🔹 GUARDAR FECHA / HORA / OBSERVACIONES INDIVIDUAL
-========================================== */
-if (isset($_POST["ajax_guardar_datos"])) {
-    $id_diligencia = intval($_POST["id_diligencia"]);
-    $fecha = trim($_POST["fecha_diligencia"] ?? "");
-    $hora  = trim($_POST["hora_diligencia"] ?? "");
-    $obs   = $_POST["observaciones_diligencia"] ?? null;
-
-    $fecha = ($fecha === "") ? null : $fecha;
-    $hora  = ($hora === "") ? null : $hora;
-
-    $sql = "UPDATE exhorto_diligencias 
-            SET fecha_diligencia=?, hora_diligencia=?, observaciones_diligencia=? 
-            WHERE id_diligencia=?";
-    $stmt = $con->prepare($sql);
-    $stmt->bind_param("sssi", $fecha, $hora, $obs, $id_diligencia);
-    $stmt->execute();
-    $stmt->close();
-    echo "ok";
-    exit;
-}
-
-/* ==========================================
-   🔹 GUARDAR FECHA/HORA GLOBAL (AUDIENCIA)
-========================================== */
-if (isset($_POST["ajax_guardar_global"])) {
-    $tipo = $_POST["tipo_diligencia"] ?? "";
-    $fecha = trim($_POST["fecha_diligencia"] ?? "");
-    $hora  = trim($_POST["hora_diligencia"] ?? "");
-    $id_expediente = intval($_POST["id_expediente"] ?? 0);
-
-    $fecha = ($fecha === "") ? null : $fecha;
-    $hora  = ($hora === "") ? null : $hora;
-
-    if (!empty($tipo) && $id_expediente > 0) {
-        $sql = "UPDATE exhorto_diligencias 
-                SET fecha_diligencia=?, hora_diligencia=? 
-                WHERE LOWER(diligencia)=LOWER(?) AND id_exhorto=?";
-        $stmt = $con->prepare($sql);
-        $stmt->bind_param("sssi", $fecha, $hora, $tipo, $id_expediente);
-        $stmt->execute();
-        $stmt->close();
-        echo "ok";
-        exit;
-    }
-}
-
-/* ==========================================
-   🔹 SUBIR PDF SIN RECARGAR (AJAX)
-========================================== */
-if (isset($_POST["ajax_subir_pdf"])) {
-    $id_diligencia = intval($_POST["id_diligencia"]);
-    $id_expediente = intval($_POST["id_expediente"]);
-    $ruta_final = "";
-
-    if (!empty($_FILES["pdf_file"]["name"])) {
-        $nombreArchivo = "diligencia_" . $id_diligencia . "_" . time() . ".pdf";
-        $ruta_final = "../uploads/" . $nombreArchivo;
-
-        if (move_uploaded_file($_FILES["pdf_file"]["tmp_name"], $ruta_final)) {
-            $sql = "UPDATE exhorto_diligencias SET pdf_path=? WHERE id_diligencia=?";
-            $stmt = $con->prepare($sql);
-            $stmt->bind_param("si", $ruta_final, $id_diligencia);
-            $stmt->execute();
-            $stmt->close();
-
-            echo "ok:" . $ruta_final;
-            exit;
-        } else {
-            echo "error_subida";
-            exit;
-        }
-    }
-}
-
-/* ==========================================
    🔹 FUNCIÓN PRINCIPAL: MOSTRAR DILIGENCIAS
 ========================================== */
 function mostrarTablaDiligencias($con, $id_expediente, $id_tua_sesion) {
@@ -109,7 +18,7 @@ function mostrarTablaDiligencias($con, $id_expediente, $id_tua_sesion) {
     $stmtT->close();
 
     $es_destinatario = ($id_tua_sesion == $id_tua_destinatario);
-    $es_remitente = ($id_tua_sesion == $id_tua_remitente);
+    $es_remitente    = ($id_tua_sesion == $id_tua_remitente);
 
     // Cargar diligencias
     $sqlD = "SELECT * FROM exhorto_diligencias WHERE id_exhorto = ?";
@@ -170,20 +79,6 @@ function mostrarTablaDiligencias($con, $id_expediente, $id_tua_sesion) {
     font-weight: 600;
     color: #2c3e50;
 }
-.toast-msg {
-    position: fixed;
-    top: 30px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #28a745;
-    color: white;
-    padding: 10px 20px;
-    border-radius: 6px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    opacity: 0;
-    transition: opacity 0.4s ease;
-    z-index: 9999;
-}
 </style>
 
 <?php foreach ($diligencias as $tipo => $items): 
@@ -219,25 +114,50 @@ function mostrarTablaDiligencias($con, $id_expediente, $id_tua_sesion) {
 <tr>
 <td><?= $i++; ?></td>
 <td><?= htmlspecialchars($d["nombre_destinatario"]); ?></td>
+<td><b><?= htmlspecialchars($d["estatus_diligencia"]); ?></b></td>
 
+<!-- 🔹 Campo Observaciones -->
 <td>
-    <b><?= htmlspecialchars($d["estatus_diligencia"]); ?></b>
-</td>
-
-<td>
+<?php if ($es_destinatario): ?>
+    <textarea 
+        name="observaciones_diligencia[<?= $d['id_diligencia'] ?>]" 
+        class="form-control" 
+        style="resize:none; width:100%; height:70px;"
+    ><?= htmlspecialchars($d['observaciones_diligencia'] ?? '') ?></textarea>
+<?php else: ?>
     <?= empty(trim($d["observaciones_diligencia"])) 
         ? "<span class='text-muted'>Sin observaciones</span>"
         : "<textarea readonly class='form-control-plaintext' style='resize:none;background:none;border:none;'>".htmlspecialchars($d["observaciones_diligencia"])."</textarea>"; ?>
+<?php endif; ?>
 </td>
 
+<!-- 🔹 Campo PDF -->
 <td>
+<?php if ($es_destinatario): ?>
+    <?php if (!empty($d["pdf_path"])): ?>
+        <div>
+            <a href="<?= htmlspecialchars($d["pdf_path"]); ?>" target="_blank" class="btn btn-outline-primary btn-sm mb-1">
+                <i class="fa fa-file-pdf"></i> Ver PDF
+            </a><br>
+            <form method="POST" style="display:inline;">
+                <input type="hidden" name="borrar_pdf_individual" value="<?= $d['id_diligencia'] ?>">
+                <button type="submit" class="btn btn-outline-danger btn-sm">
+                    <i class="fa fa-trash"></i> Borrar
+                </button>
+            </form>
+        </div>
+    <?php else: ?>
+        <input type="file" name="pdf_diligencia[<?= $d['id_diligencia'] ?>]" accept="application/pdf" class="form-control form-control-sm">
+    <?php endif; ?>
+<?php else: ?>
     <?php if (!empty($d["pdf_path"])): ?>
         <a href="<?= htmlspecialchars($d["pdf_path"]); ?>" target="_blank" class="btn btn-outline-primary btn-sm">
-            <i class="glyphicon glyphicon-file"></i> Ver PDF
+            <i class="fa fa-file-pdf"></i> Ver PDF
         </a>
     <?php else: ?>
         <span class="text-muted">Sin documento</span>
     <?php endif; ?>
+<?php endif; ?>
 </td>
 </tr>
 <?php endforeach; ?>

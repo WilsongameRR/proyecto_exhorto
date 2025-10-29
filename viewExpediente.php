@@ -27,7 +27,30 @@ $es_destinatario = ($id_tua == $id_tua_destino);
 $es_remitente    = ($id_tua == $id_tua_origen);
 
 /* ==========================================================
-   🔹 GUARDAR DATOS (folio, estatus y fecha) SIN AJAX
+   🔹 ELIMINAR PDF (POST independiente)
+========================================================== */
+if (isset($_POST["borrar_pdf_individual"]) && $es_destinatario) {
+    $id_dil = intval($_POST["borrar_pdf_individual"]);
+    $stmt = $con->prepare("SELECT pdf_path FROM exhorto_diligencias WHERE id_diligencia=?");
+    $stmt->bind_param("i", $id_dil);
+    $stmt->execute();
+    $stmt->bind_result($ruta);
+    $stmt->fetch();
+    $stmt->close();
+
+    if (!empty($ruta) && file_exists($ruta)) unlink($ruta);
+
+    $stmt = $con->prepare("UPDATE exhorto_diligencias SET pdf_path=NULL WHERE id_diligencia=?");
+    $stmt->bind_param("i", $id_dil);
+    $stmt->execute();
+    $stmt->close();
+
+    header("Location: viewExpediente.php?id=$id_expediente&msg=pdf_borrado");
+    exit();
+}
+
+/* ==========================================================
+   🔹 GUARDAR DATOS (folio, estatus, fecha, observaciones, PDFs)
 ========================================================== */
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["guardar_cambios"])) {
     $nuevo_estatus = trim($_POST["estatus"] ?? "");
@@ -54,6 +77,33 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["guardar_cambios"])) {
             $stmt->bind_param("si", $nueva_fecha, $id_expediente);
             $stmt->execute();
             $stmt->close();
+        }
+
+        // ✅ Guardar observaciones
+        if (!empty($_POST["observaciones_diligencia"])) {
+            foreach ($_POST["observaciones_diligencia"] as $id_dil => $texto) {
+                $stmt = $con->prepare("UPDATE exhorto_diligencias SET observaciones_diligencia=? WHERE id_diligencia=?");
+                $stmt->bind_param("si", $texto, $id_dil);
+                $stmt->execute();
+                $stmt->close();
+            }
+        }
+
+        // ✅ Subir nuevos PDFs
+        if (!empty($_FILES["pdf_diligencia"]["name"])) {
+            foreach ($_FILES["pdf_diligencia"]["name"] as $id_dil => $nombreArchivo) {
+                if (!empty($nombreArchivo)) {
+                    $nombreFinal = "diligencia_" . $id_dil . "_" . time() . ".pdf";
+                    $rutaDestino = "uploads/" . $nombreFinal;
+
+                    if (move_uploaded_file($_FILES["pdf_diligencia"]["tmp_name"][$id_dil], $rutaDestino)) {
+                        $stmt = $con->prepare("UPDATE exhorto_diligencias SET pdf_path=? WHERE id_diligencia=?");
+                        $stmt->bind_param("si", $rutaDestino, $id_dil);
+                        $stmt->execute();
+                        $stmt->close();
+                    }
+                }
+            }
         }
 
         header("Location: bienvenida.php?msg=guardado");
@@ -93,16 +143,11 @@ h3 {
     font-size: 20px;
     font-weight: 600;
 }
-
-/* ✅ Tabla */
 .table th, .table td {
     text-align: center !important;
     vertical-align: middle !important;
 }
-
-/* ✅ SOLO campos editables (más bajos, bonitos y modernos) */
-.select-bonito, 
-.input-bonito {
+.select-bonito, .input-bonito {
     width: 200px;
     padding: 5px 8px;
     border: 1px solid #c9d1d9;
@@ -112,14 +157,10 @@ h3 {
     color: #2c3e50;
     transition: all 0.2s ease-in-out;
     font-size: 14px;
-    height: 34px; /* más bajos */
+    height: 34px;
 }
-
 .select-bonito:hover,
-.input-bonito:hover {
-    background-color: #f1f7ff;
-}
-
+.input-bonito:hover { background-color: #f1f7ff; }
 .select-bonito:focus,
 .input-bonito:focus {
     outline: none;
@@ -127,8 +168,6 @@ h3 {
     box-shadow: 0 0 3px rgba(0,75,141,0.3);
     background-color: #fff;
 }
-
-/* ✅ Flecha moderna */
 .select-bonito {
     appearance: none;
     background-image: url("data:image/svg+xml;utf8,<svg fill='gray' height='14' viewBox='0 0 24 24' width='14' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
@@ -137,8 +176,6 @@ h3 {
     background-size: 14px;
     padding-right: 25px;
 }
-
-/* ✅ Botones */
 .text-center-btn {
     text-align: center;
     margin-top: 35px;
@@ -146,7 +183,6 @@ h3 {
     justify-content: center;
     gap: 15px;
 }
-
 .btn-success {
     background: #28a745;
     border: none;
@@ -155,9 +191,7 @@ h3 {
     font-size: 16px;
     color: #fff;
 }
-.btn-success:hover {
-    background: #218838;
-}
+.btn-success:hover { background: #218838; }
 .btn-institucional {
     background-color: #004B8D;
     border: none;
@@ -180,7 +214,7 @@ h3 {
 <div class="container" style="margin-top:40px; max-width:950px;">
     <h2>Detalle del Exhorto</h2>
 
-    <form method="POST">
+    <form method="POST" enctype="multipart/form-data">
         <input type="hidden" name="id_expediente" value="<?= htmlspecialchars($id_expediente) ?>">
 
         <table class="table table-bordered">
@@ -239,9 +273,11 @@ h3 {
         <?php mostrarTablaDiligencias($con, $id_expediente, $id_tua); ?>
 
         <div class="text-center-btn">
-            <button type="submit" name="guardar_cambios" class="btn btn-success">
-                <i class="fa-solid fa-floppy-disk me-1"></i> Guardar
-            </button>
+            <?php if ($es_destinatario): ?>
+                <button type="submit" name="guardar_cambios" class="btn btn-success">
+                    <i class="fa-solid fa-floppy-disk me-1"></i> Guardar
+                </button>
+            <?php endif; ?>
             <button type="button" id="btnRegresar" class="btn btn-institucional">
                 <i class="fa-solid fa-arrow-left me-1"></i> Regresar
             </button>
