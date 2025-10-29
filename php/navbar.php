@@ -33,20 +33,17 @@ $infoUser = $resUser->fetch_assoc();
                     <img src="images/tas.png" alt="Usuario" 
                          style="height:60px; width:60px; border-radius:50%; border:1px solid #ccc;">
                     <div style="line-height:1.3;">
-                        <!-- Nombre -->
-                        <b><?php echo $infoUser["nomcompleto"]; ?></b><br>
+                        <b><?php echo htmlspecialchars($infoUser["nomcompleto"]); ?></b><br>
                         
-                        <!-- TUA -->
                         <b>
                             TUA: 
                             <?php 
                                 echo $infoUser["tua"] 
-                                     ? "<strong>".$infoUser["tua"]."</strong> ".$infoUser["ciudad_sede"] 
+                                     ? "<strong>".htmlspecialchars($infoUser["tua"])."</strong> ".htmlspecialchars($infoUser["ciudad_sede"]) 
                                      : "Sin TUA"; 
                             ?>
                         </b><br>
                         
-                        <!-- Área y Subárea en gris -->
                         <small style="color:#bbb;">
                             Área: <?php echo $infoUser["area"] ?: "Sin área"; ?> | 
                             Subárea: <?php echo $infoUser["subarea"] ?: "Sin subárea"; ?>
@@ -57,20 +54,21 @@ $infoUser = $resUser->fetch_assoc();
 
             <!-- Menús a la derecha -->
             <ul class="nav navbar-nav navbar-right">
-                <?php if ($access_control == 1): ?>
-                <li class="dropdown">
-                    <a data-toggle="dropdown" class="dropdown-toggle" href="#">Administración <b class="caret"></b></a>
-                    <ul class="dropdown-menu">
-                        <li><a href="userview.php">Usuarios</a></li>
-                        <li><a href="viewRoles.php">Roles</a></li>
-                        <li><a href="viewAreas.php">Áreas</a></li>
-                        <li><a href="viewSubArea.php">Subáreas</a></li>
-                    </ul>
+
+                <!-- 🔹 SOLO ADMIN VE ESTE MENÚ -->
+                <?php if ($access_control === 'admin' || $access_control == 1): ?>
+                <li>
+                    <a href="viewUsuarios.php">
+                        <i class="fa fa-user-gear"></i> Usuarios
+                    </a>
                 </li>
                 <?php endif; ?>
 
+                <!-- 🔹 MENÚ DE EXPEDIENTES -->
                 <li class="dropdown">
-                    <a data-toggle="dropdown" class="dropdown-toggle" href="#">Expedientes <b class="caret"></b></a>
+                    <a data-toggle="dropdown" class="dropdown-toggle" href="#">
+                        Expedientes <b class="caret"></b>
+                    </a>
                     <ul class="dropdown-menu">
                         <li><a href="nuevoExpediente.php">Nuevo Expediente</a></li>
                         <li><a href="consultarExpediente.php">Consultar Expediente</a></li>
@@ -79,7 +77,12 @@ $infoUser = $resUser->fetch_assoc();
                     </ul>
                 </li>
 
-                <li><a class="navbar-text" href="php/cierraSesion.php"><b>Cerrar Sesión</b></a></li>
+                <!-- 🔹 BOTÓN CERRAR SESIÓN -->
+                <li>
+                    <a class="navbar-text" href="php/cierraSesion.php">
+                        <b>Cerrar Sesión</b>
+                    </a>
+                </li>
             </ul>
         </div>
     </div>
