@@ -90,7 +90,13 @@ function mostrarTablaDiligencias($con, $id_expediente, $id_tua_sesion) {
 <table class="table table-diligencias">
 <thead>
 <tr>
-<th>#</th><th>Destinatario</th><th>Estatus</th><th>Observaciones</th><th>Documento PDF</th>
+<th>#</th>
+<th>Destinatario</th>
+<th>Fecha Audiencia</th>
+<th>Hora Audiencia</th>
+<th>Estatus</th>
+<th>Observaciones</th>
+<th>Documento PDF</th>
 </tr>
 </thead>
 <tbody>
@@ -98,6 +104,25 @@ function mostrarTablaDiligencias($con, $id_expediente, $id_tua_sesion) {
 <tr>
 <td><?= $i++; ?></td>
 <td><?= htmlspecialchars($d["nombre_destinatario"]); ?></td>
+
+<!-- 🔹 Fecha de Audiencia -->
+<td>
+    <?= empty($d["fecha_diligencia"]) 
+        ? "<span class='text-muted'>—</span>" 
+        : htmlspecialchars($d["fecha_diligencia"]); ?>
+</td>
+
+<!-- 🔹 Hora de Audiencia (formato 12 horas) -->
+<td>
+    <?php
+    if (empty($d["hora_diligencia"])) {
+        echo "<span class='text-muted'>—</span>";
+    } else {
+        $hora_formato_12 = date("g:i A", strtotime($d["hora_diligencia"]));
+        echo htmlspecialchars($hora_formato_12);
+    }
+    ?>
+</td>
 
 <!-- 🔹 Campo ESTATUS -->
 <td>
