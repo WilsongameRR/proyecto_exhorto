@@ -8,7 +8,7 @@ include "conexion.php";
    🔹 FUNCIÓN PRINCIPAL: MOSTRAR DILIGENCIAS
 ========================================== */
 function mostrarTablaDiligencias($con, $id_expediente, $id_tua_sesion) {
-    // Obtener TUA origen y destino
+    // Obtener TUA origen y destino del expediente
     $sqlTuas = "SELECT id_tua_origen, id_tua_destino FROM expedientes WHERE id_expediente = ?";
     $stmtT = $con->prepare($sqlTuas);
     $stmtT->bind_param("i", $id_expediente);
@@ -17,10 +17,11 @@ function mostrarTablaDiligencias($con, $id_expediente, $id_tua_sesion) {
     $stmtT->fetch();
     $stmtT->close();
 
+    // Definir rol del usuario
     $es_destinatario = ($id_tua_sesion == $id_tua_destinatario);
     $es_remitente    = ($id_tua_sesion == $id_tua_remitente);
 
-    // Cargar diligencias
+    // Cargar diligencias del expediente
     $sqlD = "SELECT * FROM exhorto_diligencias WHERE id_exhorto = ?";
     $stmt = $con->prepare($sqlD);
     $stmt->bind_param("i", $id_expediente);
@@ -81,27 +82,10 @@ function mostrarTablaDiligencias($con, $id_expediente, $id_tua_sesion) {
 }
 </style>
 
-<?php foreach ($diligencias as $tipo => $items): 
-    $isEmplazamiento = (strtolower($tipo) === "emplazamiento");
-    $fechaBD = $items[0]["fecha_diligencia"] ?? "";
-    $horaBD  = $items[0]["hora_diligencia"] ?? "";
-?>
+<?php foreach ($diligencias as $tipo => $items): ?>
 <div class="diligencia-header">
     <i class="fa fa-folder-open"></i> Diligencia – <?= htmlspecialchars($tipo) ?>
 </div>
-
-<?php if ($isEmplazamiento): ?>
-<div style="text-align:center; margin-bottom:15px;">
-    <div style="display:inline-block; margin-right:40px;">
-        <b>📅 Fecha de audiencia:</b><br>
-        <?= $fechaBD ? htmlspecialchars(date('d/m/Y', strtotime($fechaBD))) : "<span class='text-muted'>Sin fecha</span>"; ?>
-    </div>
-    <div style="display:inline-block;">
-        <b>⏰ Hora de audiencia:</b><br>
-        <?= $horaBD ? htmlspecialchars(date('g:i A', strtotime($horaBD))) : "<span class='text-muted'>Sin hora</span>"; ?>
-    </div>
-</div>
-<?php endif; ?>
 
 <table class="table table-diligencias">
 <thead>
@@ -114,9 +98,29 @@ function mostrarTablaDiligencias($con, $id_expediente, $id_tua_sesion) {
 <tr>
 <td><?= $i++; ?></td>
 <td><?= htmlspecialchars($d["nombre_destinatario"]); ?></td>
-<td><b><?= htmlspecialchars($d["estatus_diligencia"]); ?></b></td>
 
-<!-- 🔹 Campo Observaciones -->
+<!-- 🔹 Campo ESTATUS -->
+<td>
+<?php if ($es_destinatario): ?>
+    <select 
+        name="estatus_diligencia[<?= $d['id_diligencia'] ?>]" 
+        class="select-bonito"
+        style="min-width:130px; text-align:center;"
+    >
+        <?php
+        $opciones = ["Pendiente", "En Proceso", "Finalizada", "Cancelada"];
+        foreach ($opciones as $op) {
+            $sel = ($d["estatus_diligencia"] == $op) ? "selected" : "";
+            echo "<option value='$op' $sel>$op</option>";
+        }
+        ?>
+    </select>
+<?php else: ?>
+    <b><?= htmlspecialchars($d["estatus_diligencia"]); ?></b>
+<?php endif; ?>
+</td>
+
+<!-- 🔹 Campo OBSERVACIONES -->
 <td>
 <?php if ($es_destinatario): ?>
     <textarea 
@@ -127,7 +131,8 @@ function mostrarTablaDiligencias($con, $id_expediente, $id_tua_sesion) {
 <?php else: ?>
     <?= empty(trim($d["observaciones_diligencia"])) 
         ? "<span class='text-muted'>Sin observaciones</span>"
-        : "<textarea readonly class='form-control-plaintext' style='resize:none;background:none;border:none;'>".htmlspecialchars($d["observaciones_diligencia"])."</textarea>"; ?>
+        : "<textarea readonly class='form-control-plaintext' style='resize:none;background:none;border:none;'>"
+          .htmlspecialchars($d["observaciones_diligencia"])."</textarea>"; ?>
 <?php endif; ?>
 </td>
 
@@ -141,7 +146,7 @@ function mostrarTablaDiligencias($con, $id_expediente, $id_tua_sesion) {
             </a><br>
             <form method="POST" style="display:inline;">
                 <input type="hidden" name="borrar_pdf_individual" value="<?= $d['id_diligencia'] ?>">
-                <button type="submit" class="btn btn-outline-danger btn-sm">
+                <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('¿Seguro que deseas borrar este PDF?');">
                     <i class="fa fa-trash"></i> Borrar
                 </button>
             </form>

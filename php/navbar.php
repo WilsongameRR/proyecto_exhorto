@@ -64,19 +64,6 @@ $infoUser = $resUser->fetch_assoc();
                 </li>
                 <?php endif; ?>
 
-                <!-- 🔹 MENÚ DE EXPEDIENTES -->
-                <li class="dropdown">
-                    <a data-toggle="dropdown" class="dropdown-toggle" href="#">
-                        Expedientes <b class="caret"></b>
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a href="nuevoExpediente.php">Nuevo Expediente</a></li>
-                        <li><a href="consultarExpediente.php">Consultar Expediente</a></li>
-                        <li><a href="expedientesRecibidos.php">Expedientes Recibidos</a></li>
-                        <li><a href="expedientesEnviados.php">Expedientes Enviados</a></li>
-                    </ul>
-                </li>
-
                 <!-- 🔹 BOTÓN CERRAR SESIÓN -->
                 <li>
                     <a class="navbar-text" href="php/cierraSesion.php">

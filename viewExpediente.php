@@ -27,7 +27,7 @@ $es_destinatario = ($id_tua == $id_tua_destino);
 $es_remitente    = ($id_tua == $id_tua_origen);
 
 /* ==========================================================
-   🔹 ELIMINAR PDF (POST independiente)
+   🔹 ELIMINAR PDF (solo destinatario)
 ========================================================== */
 if (isset($_POST["borrar_pdf_individual"]) && $es_destinatario) {
     $id_dil = intval($_POST["borrar_pdf_individual"]);
@@ -50,14 +50,16 @@ if (isset($_POST["borrar_pdf_individual"]) && $es_destinatario) {
 }
 
 /* ==========================================================
-   🔹 GUARDAR DATOS (folio, estatus, fecha, observaciones, PDFs)
+   🔹 GUARDAR CAMBIOS (solo destinatario)
 ========================================================== */
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["guardar_cambios"])) {
-    $nuevo_estatus = trim($_POST["estatus"] ?? "");
-    $nuevo_folio   = trim($_POST["folio_destino"] ?? "");
-    $nueva_fecha   = trim($_POST["fecha_recepcion"] ?? "");
 
     if ($es_destinatario) {
+        $nuevo_estatus = trim($_POST["estatus"] ?? "");
+        $nuevo_folio   = trim($_POST["folio_destino"] ?? "");
+        $nueva_fecha   = trim($_POST["fecha_recepcion"] ?? "");
+
+        // Actualizar expediente general
         if ($nuevo_folio !== "") {
             $stmt = $con->prepare("UPDATE expedientes SET folio_destino=? WHERE id_expediente=?");
             $stmt->bind_param("si", $nuevo_folio, $id_expediente);
@@ -84,6 +86,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["guardar_cambios"])) {
             foreach ($_POST["observaciones_diligencia"] as $id_dil => $texto) {
                 $stmt = $con->prepare("UPDATE exhorto_diligencias SET observaciones_diligencia=? WHERE id_diligencia=?");
                 $stmt->bind_param("si", $texto, $id_dil);
+                $stmt->execute();
+                $stmt->close();
+            }
+        }
+
+        // ✅ Guardar estatus de diligencias
+        if (!empty($_POST["estatus_diligencia"])) {
+            foreach ($_POST["estatus_diligencia"] as $id_dil => $nuevoEstatus) {
+                $stmt = $con->prepare("UPDATE exhorto_diligencias SET estatus_diligencia=? WHERE id_diligencia=?");
+                $stmt->bind_param("si", $nuevoEstatus, $id_dil);
                 $stmt->execute();
                 $stmt->close();
             }
@@ -123,7 +135,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["guardar_cambios"])) {
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 <script src="js/jquery.min.js"></script>
 <script src="bootstrap/js/bootstrap.min.js"></script>
-
 <style>
 body {
     background-color: #f5f7fa;
@@ -159,10 +170,8 @@ h3 {
     font-size: 14px;
     height: 34px;
 }
-.select-bonito:hover,
-.input-bonito:hover { background-color: #f1f7ff; }
-.select-bonito:focus,
-.input-bonito:focus {
+.select-bonito:hover, .input-bonito:hover { background-color: #f1f7ff; }
+.select-bonito:focus, .input-bonito:focus {
     outline: none;
     border-color: #004B8D;
     box-shadow: 0 0 3px rgba(0,75,141,0.3);
@@ -290,6 +299,5 @@ $("#btnRegresar").on("click", function(){
     window.location.href = "bienvenida.php";
 });
 </script>
-
 </body>
 </html>
